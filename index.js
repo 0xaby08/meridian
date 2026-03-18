@@ -170,9 +170,17 @@ SCREENING CYCLE — DEPLOY ONLY
 1. get_my_positions first. Only proceed if positions < ${config.risk.maxPositions}.
 2. get_wallet_balance. Proceed if SOL >= ${config.management.minSolToOpen}.
 3. get_top_candidates, pick the best one, and call study_top_lpers.
-4. Call check_smart_wallets_on_pool for the chosen pool. Smart wallet presence = strong confidence boost. No presence = neutral, rely on fundamentals.
-5. If the pool is high-quality: get_active_bin and deploy_position.
-6. Report result and reasoning including smart wallet signal and interval set.
+4. Call get_pool_memory for the chosen pool. If it has a bad track record (losing avg_pnl_pct, low win_rate), skip and try next candidate.
+5. Call check_smart_wallets_on_pool for the chosen pool.
+   - Smart wallets present → strong confidence boost, proceed to deploy.
+   - No smart wallets → MUST call get_token_holders (use base mint from the pool) before deciding:
+     * SKIP if: top_10_real_holders_pct > 60% (dangerously concentrated) OR bundlers_pct_in_top_100 > 30% (extreme bundling)
+     * CAUTION (check organic score + buy/sell pressure before deciding) if: bundlers_pct 15–30% AND top_10 > 40%
+     * DEPLOY if: distribution is healthy, organic score is high, or smart_wallets_holding shows known wallets holding the token
+     * Bundlers 5–15% are normal and not a reason to skip on their own — weigh against overall token health
+     * Report what you found and why you decided to deploy or skip.
+6. If the pool passes all checks: get_active_bin and deploy_position.
+7. Report result and reasoning including smart wallet signal, holder check outcome, and interval set.
       `, config.llm.maxSteps, [], "SCREENER", config.llm.screeningModel);
       screenReport = content;
     } catch (error) {
